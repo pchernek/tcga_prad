@@ -17,11 +17,11 @@ if(!require(RTCGAToolbox)){
 
 # Download TCGA PRAD data
 
-```{r}
+```{r, cache=TRUE}
 library(RTCGAToolbox)
 rundates <- getFirehoseRunningDates()
 analysisdates <- getFirehoseAnalyzeDates()
-ov <- getFirehoseData("PRAD", runDate=rundates[1],
+prad <- getFirehoseData("PRAD", runDate=rundates[1],
                       gistic2_Date=analysisdates[1], RNAseq_Gene=TRUE, 
         miRNASeq_Gene=TRUE, RNAseq2_Gene_Norm=TRUE, CNA_SNP=TRUE,
         CNV_SNP=TRUE, CNA_Seq=TRUE, CNA_CGH=TRUE,  Methylation=TRUE,
@@ -29,7 +29,16 @@ ov <- getFirehoseData("PRAD", runDate=rundates[1],
 ```
 
 # Extract available data types
+
+
 ```{r}
+choices <- tolower(gsub("_", "", c("RNAseq_Gene", "miRNASeq_Gene",
+             "RNAseq2_Gene_Norm", "CNA_SNP", "CNV_SNP", "CNA_Seq",
+             "CNA_CGH", "Methylation", "Mutation", "mRNA_Array",
+             "miRNA_Array", "RPPA")))
+```
+
+```{r, cache=TRUE}
 dses <- lapply(choices, function(choice) try(extract(prad, choice, 
                                             clinic=TRUE),
                                              silent=TRUE))
@@ -37,7 +46,7 @@ names(dses) <- choices
 dses
 ```
 
-```{r}
+```{r, cache=TRUE}
 eset <- extract(prad, "rnaseq2genenorm")
 write.csv(exprs(eset), file="prad_rnaseq.csv")
 write.csv(pData(eset), file="prad_clinical.csv")
@@ -46,7 +55,46 @@ saveRDS(eset, file="prad_eset.rds")
 
 To load the eset again:
 
-```{r}
+```{r, cache=TRUE}
 eset <- readRDS("prad_eset.rds")
+```
+
+# Make a histogram of PSA (KLK3) expression
+
+```{r}
+hist(exprs(eset["KLK3", ]))
+hist(log(exprs(eset["KLK3", ])))
+```
+
+# See what clinical data are available by default:
+
+```{r}
+summary(pData(eset))
+```
+
+# Look for association between KLK3 expression and clinical PSA
+
+```{r}
+psadat <- data.frame(psa=as.numeric(as.character(eset$patient.stage_event.psa.psa_value)),
+                     klk3=t(exprs(eset["KLK3", ])))
+psadat.complete <- psadat[complete.cases(psadat), ]
+plot(KLK3 ~ psa, data=psadat.complete, xlab="clinical PSA", ylab="KLK3 tumor expression", log="xy")
+fit <- lowess(x=psadat.complete$psa, y=psadat.complete$KLK3)
+lines(fit, col="red", lw=3)
+```
+
+## Is there an association between PSA in the urine and KLK3 in the tumor?
+
+```{r}
+cor.test(x=psadat$KLK3,  y=psadat$psa, method="spearman")
+```
+
+
+# Clinical psa as a function of ethnicity
+
+Need to get the better race variable with complete data from Tiffany:
+```{r}
+table(eset$race)
+boxplot(psadat$psa ~ eset$race, ylab="PSA")
 ```
 
