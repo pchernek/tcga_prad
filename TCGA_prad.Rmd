@@ -1,0 +1,52 @@
+---
+title: "TCGA PRAD"
+author: "Levi Waldron"
+date: "September 14, 2015"
+output: html_document
+---
+
+# Load TCGA data
+
+```{r}
+if(!require(RTCGAToolbox)){
+  biocLite("devtools")
+  biocLite(c("limma", "RCircos", "data.table", "RCurl", "RJSONIO"))
+  biocLite("Link-NY/RTCGAToolbox")
+}
+```
+
+# Download TCGA PRAD data
+
+```{r}
+library(RTCGAToolbox)
+rundates <- getFirehoseRunningDates()
+analysisdates <- getFirehoseAnalyzeDates()
+ov <- getFirehoseData("PRAD", runDate=rundates[1],
+                      gistic2_Date=analysisdates[1], RNAseq_Gene=TRUE, 
+        miRNASeq_Gene=TRUE, RNAseq2_Gene_Norm=TRUE, CNA_SNP=TRUE,
+        CNV_SNP=TRUE, CNA_Seq=TRUE, CNA_CGH=TRUE,  Methylation=TRUE,
+        Mutation=TRUE, mRNA_Array=TRUE, miRNA_Array=TRUE, RPPA=TRUE)
+```
+
+# Extract available data types
+```{r}
+dses <- lapply(choices, function(choice) try(extract(prad, choice, 
+                                            clinic=TRUE),
+                                             silent=TRUE))
+names(dses) <- choices
+dses
+```
+
+```{r}
+eset <- extract(prad, "rnaseq2genenorm")
+write.csv(exprs(eset), file="prad_rnaseq.csv")
+write.csv(pData(eset), file="prad_clinical.csv")
+saveRDS(eset, file="prad_eset.rds")
+```
+
+To load the eset again:
+
+```{r}
+eset <- readRDS("prad_eset.rds")
+```
+
