@@ -7,7 +7,7 @@ output: html_document
 
 # Load TCGA data
 
-```{r}
+```{r, message=FALSE}
 if(!require(RTCGAToolbox)){
   biocLite("devtools")
   biocLite(c("limma", "RCircos", "data.table", "RCurl", "RJSONIO"))
@@ -144,6 +144,12 @@ dds <- DESeq(dds)
 res <- results(dds, contrast=c("race", "black or african american", "white"))
 res
 write.csv(res, file="DESeq2_results.csv")
+```
+
+```{r}
+res.sig <- res[which(res$padj < 0.05), ]
+res.sig <- res.sig[order(res.sig$pvalue), ]
+as.matrix(res.sig)
 ```
 
 

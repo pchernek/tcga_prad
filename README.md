@@ -16,6 +16,15 @@ if(!require(RTCGAToolbox)){
 }
 ```
 
+```
+## Warning: replacing previous import by 'IRanges::shift' when loading
+## 'RTCGAToolbox'
+```
+
+```r
+library(DESeq2)
+```
+
 # Download TCGA PRAD data
 
 
@@ -37,20 +46,20 @@ prad <- getFirehoseData("PRAD", runDate=rundates[1],
 ## gdac.broadinstitute.org_PRAD.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2015040200.0.0.tar.gz
 ## Using locally cached version of ./20150402-PRAD-RNAseq2GeneNorm.txt
 ## RNAseq2 data will be imported! This may take a while!
-## Start: 2015-09-14 17:45:19
+## Start: 2015-12-01 13:56:53
 ```
 
 ```
-## Read 48.7% of 20533 rowsRead 97.4% of 20533 rowsRead 20533 rows and 551 (of 551) columns from 0.090 GB file in 00:00:05
+## Read 48.7% of 20533 rowsRead 97.4% of 20533 rowsRead 20533 rows and 551 (of 551) columns from 0.090 GB file in 00:00:06
 ```
 
 ```
-## Done: 2015-09-14 17:45:23
+## Done: 2015-12-01 13:56:59
 ## gdac.broadinstitute.org_PRAD.Merge_mirnaseq__illuminahiseq_mirnaseq__bcgsc_ca__Level_3__miR_gene_expression__data.Level_3.2015040200.0.0.tar.gz
 ## Using locally cached version of ./20150402-PRAD-miRNAseqGene.txt
 ## miRNAseq data will be imported! This may take a while!
-## Start: 2015-09-14 17:45:36
-## Done: 2015-09-14 17:45:36
+## Start: 2015-12-01 13:57:16
+## Done: 2015-12-01 13:57:16
 ## gdac.broadinstitute.org_PRAD.Merge_snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_hg19__seg.Level_3.2015040200.0.0.tar.gz
 ## Using locally cached version of ./20150402-PRAD-CNASNPHg19.txt
 ## gdac.broadinstitute.org_PRAD.Merge_snp__genome_wide_snp_6__broad_mit_edu__Level_3__segmented_scna_minus_germline_cnv_hg19__seg.Level_3.2015040200.0.0.tar.gz
@@ -128,25 +137,86 @@ dses
 ## Annotation:  
 ## 
 ## $cnasnp
-## [1] "Error in extract(prad, choice, clinic = TRUE) : \n  object 'sourceName' not found\n"
-## attr(,"class")
-## [1] "try-error"
-## attr(,"condition")
-## <simpleError in extract(prad, choice, clinic = TRUE): object 'sourceName' not found>
+## GRangesList object of length 1009:
+## $tcga-2a-a8vl-01 
+## GRanges object with 377 ranges and 2 metadata columns:
+##         seqnames                ranges strand   | Num_Probes Segment_Mean
+##            <Rle>             <IRanges>  <Rle>   |  <numeric>    <numeric>
+##     [1]     chr1  [   61735, 16153497]      *   |       8417       0.0192
+##     [2]     chr1  [16153536, 16155010]      *   |          9      -1.3997
+##     [3]     chr1  [16165661, 25583291]      *   |       5733       0.0271
+##     [4]     chr1  [25583341, 25646986]      *   |         29      -1.7924
+##     [5]     chr1  [25661501, 35091594]      *   |       4967       0.0196
+##     ...      ...                   ...    ... ...        ...          ...
+##   [373]    chr22 [24401529,  51234455]      *   |      18918       0.0199
+##   [374]    chr23 [  168477,  34044373]      *   |      21155       0.0011
+##   [375]    chr23 [34046553,  34070287]      *   |         23      -3.3231
+##   [376]    chr23 [34073425, 155182354]      *   |      62721       0.0039
+##   [377]    chr24 [ 2650438,  59018259]      *   |       8631      -0.8552
+## 
+## ...
+## <1008 more elements>
+## -------
+## seqinfo: 24 sequences from an unspecified genome; no seqlengths
 ## 
 ## $cnvsnp
-## [1] "Error in extract(prad, choice, clinic = TRUE) : \n  object 'sourceName' not found\n"
-## attr(,"class")
-## [1] "try-error"
-## attr(,"condition")
-## <simpleError in extract(prad, choice, clinic = TRUE): object 'sourceName' not found>
+## GRangesList object of length 1003:
+## $tcga-2a-a8vl-01 
+## GRanges object with 117 ranges and 2 metadata columns:
+##         seqnames                ranges strand   | Num_Probes Segment_Mean
+##            <Rle>             <IRanges>  <Rle>   |  <numeric>    <numeric>
+##     [1]     chr1 [ 3218610,  46599744]      *   |      22807       0.0218
+##     [2]     chr1 [46601887,  53641875]      *   |       3572      -0.3873
+##     [3]     chr1 [53641911,  58304399]      *   |       3399       0.0166
+##     [4]     chr1 [58314187,  58497759]      *   |        168        -0.37
+##     [5]     chr1 [58498264, 104381295]      *   |      28166       0.0157
+##     ...      ...                   ...    ... ...        ...          ...
+##   [113]    chr21 [42827478,  42864812]      *   |        101      -0.8952
+##   [114]    chr21 [42867190,  42872410]      *   |         26      -0.3935
+##   [115]    chr21 [42875404,  47678774]      *   |       2367       0.0223
+##   [116]    chr22 [17423930,  49331012]      *   |      16920        0.024
+##   [117]    chr23 [ 3157107, 154905589]      *   |      63256       0.0041
+## 
+## ...
+## <1002 more elements>
+## -------
+## seqinfo: 23 sequences from an unspecified genome; no seqlengths
 ## 
 ## $cnaseq
-## [1] "Error in extract(prad, choice, clinic = TRUE) : \n  object 'sourceName' not found\n"
-## attr(,"class")
-## [1] "try-error"
-## attr(,"condition")
-## <simpleError in extract(prad, choice, clinic = TRUE): object 'sourceName' not found>
+## GRangesList object of length 230:
+## $tcga-ch-5741-01 
+## GRanges object with 88 ranges and 2 metadata columns:
+##        seqnames                 ranges strand   | Num_Probes
+##           <Rle>              <IRanges>  <Rle>   |  <numeric>
+##    [1]     chr1 [    10208, 170998749]      *   |       <NA>
+##    [2]     chr1 [170998750, 171222653]      *   |       <NA>
+##    [3]     chr1 [171222654, 249240606]      *   |       <NA>
+##    [4]     chr2 [    10001, 243189359]      *   |       <NA>
+##    [5]     chr3 [    60174,  70581515]      *   |       <NA>
+##    ...      ...                    ...    ... ...        ...
+##   [84]    chr23 [128529035, 128582748]      *   |       <NA>
+##   [85]    chr23 [128582749, 154930285]      *   |       <NA>
+##   [86]    chr24 [  2649474,   6711879]      *   |       <NA>
+##   [87]    chr24 [  6711880,   6813216]      *   |       <NA>
+##   [88]    chr24 [  6813217,  28809960]      *   |       <NA>
+##              Segment_Mean
+##                 <numeric>
+##    [1] 0.0445519350183502
+##    [2] -0.719244299367207
+##    [3] 0.0416368338763181
+##    [4] 0.0400665363289484
+##    [5] 0.0357777450352256
+##    ...                ...
+##   [84]  -2.31507050198042
+##   [85] 0.0277920429090032
+##   [86] 0.0865462501641183
+##   [87]  0.952415386548219
+##   [88]  0.101459215941079
+## 
+## ...
+## <229 more elements>
+## -------
+## seqinfo: 24 sequences from an unspecified genome; no seqlengths
 ## 
 ## $cnacgh
 ## [1] "Error in extract(prad, choice, clinic = TRUE) : \n  There is no data for that data type!\n"
@@ -163,11 +233,27 @@ dses
 ## <simpleError in extract(prad, choice, clinic = TRUE): There is no data for that data type!>
 ## 
 ## $mutation
-## [1] "Error in extract(prad, choice, clinic = TRUE) : \n  object 'sourceName' not found\n"
-## attr(,"class")
-## [1] "try-error"
-## attr(,"condition")
-## <simpleError in extract(prad, choice, clinic = TRUE): object 'sourceName' not found>
+## GRangesList object of length 420:
+## $tcga-2a-a8vl-01 
+## GRanges object with 39 ranges and 0 metadata columns:
+##        seqnames                 ranges strand
+##           <Rle>              <IRanges>  <Rle>
+##    [1]    chr10 [ 29775061,  29775061]      +
+##    [2]     chr2 [ 30480447,  30480447]      +
+##    [3]     chr8 [ 39495171,  39495171]      +
+##    [4]     chr1 [158262073, 158262073]      +
+##    [5]     chr8 [ 41519413,  41519413]      +
+##    ...      ...                    ...    ...
+##   [35]     chr3 [138739004, 138739004]      +
+##   [36]    chr20 [ 33440316,  33440316]      +
+##   [37]    chr20 [ 33324502,  33324502]      +
+##   [38]     chr3 [195713385, 195713386]      +
+##   [39]     chr5 [180708776, 180708777]      +
+## 
+## ...
+## <419 more elements>
+## -------
+## seqinfo: 25 sequences from an unspecified genome; no seqlengths
 ## 
 ## $mrnaarray
 ## [1] "Error in extract(prad, choice, clinic = TRUE) : \n  There is no data for that data type!\n"
@@ -1908,3 +1994,251 @@ boxplot(psadat$psa ~ eset$race, ylab="PSA")
 
 ![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png) 
 
+# MicroRNA dataset
+Create and save to disk:
+
+```r
+library(Biobase)
+eset1 <- extract(prad, "miRNASeq_Gene")
+saveRDS(eset1, file="prad_mirna_eset.rds")
+```
+
+
+```r
+mergeVecs <- function(x1, x2){
+  ##x1 and x2 are vectors to be merged.
+  ##x1 will be over-written by x2, and in case of conflict, x2 takes priority
+  if(!identical(length(x1), length(x2))) stop("x1 and x2 must have the same length")
+  if(!identical(class(x1), class(x2))) stop("x1 and x2 must have the same class")
+  x1[is.na(x1)] = x2[is.na(x1)]
+  mismatches <- which(x1 != x2)
+  if(length(mismatches) > 0){
+    warning(paste("There were mismatches in positions:", paste0(mismatches, collapse=", ")))
+    x1[mismatches] = x2[mismatches]
+  }
+  return(x1)
+}
+mergeVecs(x1=c(1, 2, 3, NA), x2=c(2, 2, NA, 4))
+```
+
+```
+## Warning in mergeVecs(x1 = c(1, 2, 3, NA), x2 = c(2, 2, NA, 4)): There were
+## mismatches in positions: 1
+```
+
+```
+## [1] 2 2 3 4
+```
+
+
+```r
+eset1$race = mergeVecs(as.character(eset1$patient.clinical_cqcf.race), as.character(eset1$patient.race))
+eset1 = eset1[, eset1$race %in% c("white", "black or african american")]
+```
+
+## DESeq2
+
+
+```r
+countData <- exprs(eset1)
+colData <- pData(eset1)
+dds <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = colData,
+                              design = ~ batch_number + race)
+```
+
+```
+## converting counts to integer mode
+```
+
+```
+## Warning in DESeqDataSet(se, design = design, ignoreRank): some variables in
+## design formula are characters, converting to factors
+```
+
+```r
+dds <- DESeq(dds)
+```
+
+```
+## estimating size factors
+## estimating dispersions
+## gene-wise dispersion estimates
+## mean-dispersion relationship
+## final dispersion estimates
+## fitting model and testing
+## -- replacing outliers and refitting for 848 genes
+## -- DESeq argument 'minReplicatesForReplace' = 7 
+## -- original counts are preserved in counts(dds)
+## estimating dispersions
+## fitting model and testing
+```
+
+
+```r
+res <- results(dds, contrast=c("race", "black or african american", "white"))
+res
+```
+
+```
+## log2 fold change (MAP): race black or african american vs white 
+## Wald test p-value: race black or african american vs white 
+## DataFrame with 1046 rows and 6 columns
+##                  baseMean log2FoldChange      lfcSE        stat
+##                 <numeric>      <numeric>  <numeric>   <numeric>
+## hsa-let-7a-1     33381.49     0.05927754 0.06097997   0.9720821
+## hsa-let-7a-2     66427.53     0.05557392 0.06096748   0.9115338
+## hsa-let-7a-3     33365.92     0.05785808 0.06074905   0.9524112
+## hsa-let-7b       38096.28     0.01559059 0.06725232   0.2318224
+## hsa-let-7c       29852.06     0.26869636 0.08075931   3.3271254
+## ...                   ...            ...        ...         ...
+## hsa-mir-95       5.692126     0.05668354 0.11481130  0.49371047
+## hsa-mir-96     110.185592     0.05623315 0.10721906  0.52446972
+## hsa-mir-98     137.149551     0.00464962 0.05136742  0.09051691
+## hsa-mir-99a  10770.009268     0.20656289 0.06969620  2.96376118
+## hsa-mir-99b  66637.948461    -0.08241718 0.06130383 -1.34440517
+##                    pvalue       padj
+##                 <numeric>  <numeric>
+## hsa-let-7a-1 0.3310096820 0.80766362
+## hsa-let-7a-2 0.3620141827 0.82645386
+## hsa-let-7a-3 0.3408884798 0.81227333
+## hsa-let-7b   0.8166759809 0.96976230
+## hsa-let-7c   0.0008774687 0.03838693
+## ...                   ...        ...
+## hsa-mir-95     0.62151067 0.93250979
+## hsa-mir-96     0.59995188 0.93250979
+## hsa-mir-98     0.92787645 0.98779169
+## hsa-mir-99a    0.00303904 0.08080911
+## hsa-mir-99b    0.17881740 0.66132487
+```
+
+```r
+write.csv(res, file="DESeq2_results.csv")
+```
+
+
+```r
+res.sig <- res[which(res$padj < 0.05), ]
+res.sig <- res.sig[order(res.sig$pvalue), ]
+as.matrix(res.sig)
+```
+
+```
+##                   baseMean log2FoldChange      lfcSE      stat
+## hsa-mir-1304  3.376936e+00      1.3193097 0.14133438  9.334669
+## hsa-mir-767   2.082448e+00      0.7613924 0.14228032  5.351354
+## hsa-mir-105-2 1.494232e+00      0.6720750 0.14077383  4.774148
+## hsa-mir-3647  1.513634e+01      0.4711865 0.10838819  4.347213
+## hsa-mir-105-1 1.366677e+00      0.6114070 0.14082390  4.341643
+## hsa-mir-3117  2.007749e+00     -0.6026826 0.14574813 -4.135096
+## hsa-mir-3651  4.681865e+00      0.5657764 0.14544036  3.890092
+## hsa-mir-130b  4.505824e+01      0.3492794 0.09069825  3.851005
+## hsa-mir-628   2.748908e+01      0.2452595 0.06742508  3.637511
+## hsa-mir-1266  1.097473e+01     -0.3756648 0.10888747 -3.450027
+## hsa-mir-346   4.051674e-01      0.5068155 0.14975427  3.384315
+## hsa-mir-585   9.648963e-01     -0.5062834 0.15085215 -3.356156
+## hsa-let-7c    2.985206e+04      0.2686964 0.08075931  3.327125
+## hsa-mir-1298  7.507258e+00     -0.5004641 0.15058181 -3.323536
+## hsa-mir-202   2.887445e+00     -0.4813606 0.14614070 -3.293816
+## hsa-mir-1224  3.135288e+00      0.4870229 0.14809429  3.288600
+##                     pvalue         padj
+## hsa-mir-1304  1.013070e-20 6.179726e-18
+## hsa-mir-767   8.729852e-08 2.662605e-05
+## hsa-mir-105-2 1.804701e-06 3.669558e-04
+## hsa-mir-3647  1.378786e-05 1.725342e-03
+## hsa-mir-105-1 1.414215e-05 1.725342e-03
+## hsa-mir-3117  3.548058e-05 3.607192e-03
+## hsa-mir-3651  1.002061e-04 8.732242e-03
+## hsa-mir-130b  1.176343e-04 8.969615e-03
+## hsa-mir-628   2.752854e-04 1.865823e-02
+## hsa-mir-1266  5.605297e-04 3.419231e-02
+## hsa-mir-346   7.135620e-04 3.838693e-02
+## hsa-mir-585   7.903391e-04 3.838693e-02
+## hsa-let-7c    8.774687e-04 3.838693e-02
+## hsa-mir-1298  8.888388e-04 3.838693e-02
+## hsa-mir-202   9.883712e-04 3.838693e-02
+## hsa-mir-1224  1.006870e-03 3.838693e-02
+```
+
+
+# Not needed, here for posterity. Loading & checking Tiffany's racevar.
+Load Tiffany's file with the race variable and make its barcodes equivalent to eset1:
+
+```r
+racevar <- read.csv("racevariable.csv", stringsAsFactors = FALSE)
+racevar[, 1] <- paste0(racevar[, 1], "-01")
+racevar[, 1] <- gsub(".", "-", racevar[, 1], fixed=TRUE)
+```
+
+For interests' sake, which patients are in one dataset but not the other?
+
+
+```r
+racevar[, 1][!racevar[, 1] %in% sampleNames(eset1)]
+```
+
+```
+##  [1] "tcga-2a-a8vt-01" "tcga-2a-a8vv-01" "tcga-2a-a8w1-01"
+##  [4] "tcga-ch-5751-01" "tcga-ej-5499-01" "tcga-ej-5502-01"
+##  [7] "tcga-ej-a8fo-01" "tcga-ej-ab20-01" "tcga-fc-7708-01"
+## [10] "tcga-fc-a4ji-01" "tcga-g9-6347-01" "tcga-g9-6354-01"
+## [13] "tcga-hc-7741-01" "tcga-hc-8212-01" "tcga-j4-8200-01"
+## [16] "tcga-j4-aatz-01" "tcga-j9-a8ck-01" "tcga-kc-a4bv-01"
+## [19] "tcga-kk-a6e0-01" "tcga-kk-a6e6-01" "tcga-kk-a6e7-01"
+## [22] "tcga-kk-a7az-01" "tcga-kk-a8i9-01" "tcga-kk-a8id-01"
+## [25] "tcga-m7-a71y-01" "tcga-qu-a6il-01" "tcga-v1-a8ww-01"
+## [28] "tcga-v1-a9ol-01" "tcga-v1-a9zk-01" "tcga-vn-a88o-01"
+## [31] "tcga-xa-a8jr-01" "tcga-xj-a9dx-01" "tcga-xk-aaja-01"
+## [34] "tcga-xq-a8tb-01" "tcga-y6-a8tl-01" "tcga-yj-a8sw-01"
+## [37] "tcga-zg-a9l1-01"
+```
+
+```r
+sampleNames(eset1)[!sampleNames(eset1) %in% racevar[, 1]]
+```
+
+```
+##  [1] "tcga-ch-5761-11" "tcga-ch-5767-11" "tcga-ch-5768-11"
+##  [4] "tcga-ch-5769-11" "tcga-ej-7115-11" "tcga-ej-7123-11"
+##  [7] "tcga-ej-7125-11" "tcga-ej-7314-11" "tcga-ej-7315-11"
+## [10] "tcga-ej-7317-11" "tcga-ej-7321-11" "tcga-ej-7327-11"
+## [13] "tcga-ej-7328-11" "tcga-ej-7330-11" "tcga-ej-7331-11"
+## [16] "tcga-ej-7781-11" "tcga-ej-7782-11" "tcga-ej-7783-11"
+## [19] "tcga-ej-7784-11" "tcga-ej-7785-11" "tcga-ej-7786-11"
+## [22] "tcga-ej-7789-11" "tcga-ej-7792-11" "tcga-ej-7793-11"
+## [25] "tcga-ej-7794-11" "tcga-ej-7797-11" "tcga-g9-6333-11"
+## [28] "tcga-g9-6342-11" "tcga-g9-6348-11" "tcga-g9-6351-11"
+## [31] "tcga-g9-6356-11" "tcga-g9-6362-11" "tcga-g9-6363-11"
+## [34] "tcga-g9-6365-11" "tcga-g9-6384-11" "tcga-g9-6496-11"
+## [37] "tcga-g9-6499-11" "tcga-hc-7211-11" "tcga-hc-7737-11"
+## [40] "tcga-hc-7738-11" "tcga-hc-7740-11" "tcga-hc-7742-11"
+## [43] "tcga-hc-7745-11" "tcga-hc-7747-11" "tcga-hc-7752-11"
+## [46] "tcga-hc-7819-11" "tcga-hc-8258-11" "tcga-hc-8259-11"
+## [49] "tcga-hc-8260-11" "tcga-hc-8262-11" "tcga-j4-a83j-11"
+## [52] "tcga-v1-a9o5-06"
+```
+
+Keep only patients in both eset1 and racevar, and match up the rows:
+
+```r
+eset2 <- eset1[, sampleNames(eset1) %in% racevar[, 1]]
+racevar <- racevar[racevar[, 1] %in% sampleNames(eset2), ]
+racevar <- racevar[match(sampleNames(eset2), racevar[, 1]), ]
+all.equal(sampleNames(eset2), racevar[, 1])
+```
+
+```
+## [1] TRUE
+```
+
+Add racevar[, 2] to eset2:
+
+```r
+eset2$racevar <- racevar[, 2]
+summary(eset2$racevar == eset2$race)
+```
+
+```
+##    Mode    TRUE    NA's 
+## logical     458       0
+```
