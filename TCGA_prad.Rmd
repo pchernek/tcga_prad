@@ -1,7 +1,7 @@
 ---
 title: "TCGA PRAD"
-author: "Levi Waldron"
-date: "September 14, 2015"
+author: "Peter Chernek and Levi Waldron"
+date: "December 23, 2015"
 output: html_document
 ---
 
@@ -69,7 +69,7 @@ hist(log(exprs(eset.rnaseq["KLK3", ])))
 
 # See what clinical data are available by default:
 
-```{r}
+```{r, eval=FALSE}
 summary(pData(eset.rnaseq))
 ```
 
@@ -132,7 +132,7 @@ eset = eset[, eset$racevar %in% c("white", "black or african american")]
 eset$gleason <- as.numeric(eset$gleason_score)
 ```
 
-## DESeq2 correcting for batch only
+## DESeq2 correcting for batch and Gleason score
 
 ```{r, cache=TRUE}
 countData <- exprs(eset)
@@ -145,27 +145,69 @@ dds <- DESeq(dds)
 
 ```{r, cache=TRUE}
 res.batch.gleason <- results(dds, contrast=c("racevar", "black or african american", "white"))
-res.batch.gleason
+res.batch.gleason <- res.batch.gleason[order(res.batch.gleason$pvalue), ]
 write.csv(res.batch.gleason, file="DESeq2_batch.gleason.csv")
 ```
 
 ```{r}
-res.sig <- res.batch.gleason[which(res.batch.gleason$padj < 0.05), ]
-res.sig <- res.sig[order(res.sig$pvalue), ]
-as.matrix(res.sig)
+(res.batch.gleason.sig <- res.batch.gleason[which(res.batch.gleason$padj < 0.05), ])
 ```
 
 ### Heatmap
 
-```{r}
+```{r heatmapbatchgleason}
 library(pheatmap)
-countData <- exprs(eset)
-countData <- countData[rownames(countData) %in% rownames(res.batch), ] #c("hsa-mir-1-2","hsa-mir-1226","hsa-mir-133a-1","hsa-mir-133a-2", "hsa-mir-133b", "hsa-mir-137", "hsa-mir-592"), ]
-pheatmap(countData)
-scaleyellowred <- colorRampPalette(c("lightyellow", "red"), space = "rgb")(100)
+nt <- normTransform(dds) # defaults to log2(x+1)
+log2.norm.counts <- assay(nt)[rownames(countData) %in% rownames(res.batch.gleason.sig), ]
+df <- as.data.frame(colData(dds)[, c("gleason","racevar")])
+##countData <- countData #c("hsa-mir-1-2","hsa-mir-1226","hsa-mir-133a-1","hsa-mir-133a-2", "hsa-mir-133b", "hsa-mir-137", "hsa-mir-592"), ]
+pheatmap(log2.norm.counts, cluster_rows=TRUE, show_colnames=FALSE, cluster_cols=TRUE,
+         clustering_distance_rows="correlation", 
+         clustering_distance_cols="correlation", 
+         scale="none", annotation_col=df)
+```
 
-heatmap(as.matrix(countData), Rowv = NA, Colv = NA, col = scaleyellowred)
+Boxplot of the top differentially expressed miRNA
+```{r boxplot}
+topmir=rownames(res.batch.gleason.sig)[1]
+boxplot(log2.norm.counts[topmir, ] ~ df$racevar,
+        xlab="Race", ylab="log2 expression", main=topmir)
+stripchart(log2.norm.counts[topmir, ] ~ df$racevar, vertical=TRUE, method="jitter",
+            pch = 21, col = "maroon", bg = "bisque", 
+            add = TRUE)
+```
 
+## DESeq2 correcting for batch only
+
+```{r deseqbatchonly, cache=TRUE}
+dds2 <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = colData,
+                              design = ~ batch_number + racevar)
+dds2 <- DESeq(dds2)
+```
+
+```{r resbatchonly, cache=TRUE}
+res.batch <- results(dds2, contrast=c("racevar", "black or african american", "white"))
+res.batch <- res.batch[order(res.batch$pvalue), ]
+write.csv(res.batch, file="DESeq2_batch.csv")
+```
+
+```{r}
+(res.batch.sig <- res.batch[which(res.batch$padj < 0.05), ])
+```
+
+### Heatmap
+
+```{r heatmapbatchonly, echo=FALSE}
+library(pheatmap)
+nt <- normTransform(dds2) # defaults to log2(x+1)
+log2.norm.counts <- assay(nt)[rownames(countData) %in% rownames(res.batch.sig), ]
+df <- as.data.frame(colData(dds2)[, c("gleason","racevar")])
+##countData <- countData #c("hsa-mir-1-2","hsa-mir-1226","hsa-mir-133a-1","hsa-mir-133a-2", "hsa-mir-133b", "hsa-mir-137", "hsa-mir-592"), ]
+pheatmap(log2.norm.counts, cluster_rows=TRUE, show_colnames=FALSE, cluster_cols=TRUE,
+         clustering_distance_rows="correlation", 
+         clustering_distance_cols="correlation", 
+         scale="none", annotation_col=df)
 ```
 
 # Not needed, here for posterity. Loading & checking Tiffany's racevar.
