@@ -160,15 +160,16 @@ library(pheatmap)
 sig.mir <- rownames(countData)[rownames(countData) %in% rownames(res.batch.gleason.sig)]
 nt <- normTransform(dds) # defaults to log2(x+1)
 log2.norm.counts <- assay(nt)[sig.mir, ]
-df <- as.data.frame(colData(dds)[, c("gleason","racevar")])
-raceorder <- order(df$racevar, df$gleason, log2.norm.counts["hsa-mir-1304", ])
-df <- df[raceorder, ]
+df <- as.data.frame(colData(dds))[, c("gleason", "racevar"), drop=FALSE]
+raceorder <- order(df$racevar, colSums(log2.norm.counts))
+df <- df[raceorder, , drop=FALSE]
 log2.norm.counts <- log2.norm.counts[, raceorder]
 stopifnot(identical(rownames(df), colnames(log2.norm.counts)))
-pheatmap(log2.norm.counts, cluster_rows=TRUE, show_colnames=FALSE, cluster_cols=FALSE,
+pheatmap(log2.norm.counts, cluster_rows=TRUE, show_colnames=FALSE, 
+         cluster_cols=TRUE,
          clustering_distance_rows="correlation", 
          clustering_distance_cols="correlation", 
-         scale="row", annotation_col=df)
+         scale="none", annotation_col=df["racevar"])
 ```
 
 Boxplot of the top differentially expressed miRNA
@@ -208,15 +209,15 @@ sig.mir.batch <- rownames(countData)[rownames(countData) %in% rownames(res.batch
 nt <- normTransform(dds2) # defaults to log2(x+1)
 log2.norm.counts <- assay(nt)[sig.mir.batch, ]
 df <- as.data.frame(colData(dds2)[, c("gleason","racevar")])
-raceorder <- order(df$racevar, df$gleason, log2.norm.counts["hsa-mir-1304", ])
-df <- df[raceorder, ]
+raceorder <- order(df$racevar, colSums(log2.norm.counts))
+df <- df[raceorder, , drop=FALSE]
 log2.norm.counts <- log2.norm.counts[, raceorder]
 stopifnot(identical(rownames(df), colnames(log2.norm.counts)))
 pheatmap(log2.norm.counts, cluster_rows=TRUE, 
          show_colnames=FALSE, cluster_cols=FALSE,
          clustering_distance_rows="correlation", 
          clustering_distance_cols="correlation", 
-         scale="row", annotation_col=df)
+         scale="row", annotation_col=df["racevar"])
 ```
 
 # Not needed, here for posterity. Loading & checking Tiffany's racevar.
