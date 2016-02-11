@@ -103,9 +103,9 @@ boxplot(psadat$psa ~ eset.rnaseq$race, ylab="PSA")
 Create and save to disk:
 ```{r}
 library(Biobase)
-eset <- extract(prad, "miRNASeq_Gene")
-saveRDS(eset, file="prad_mirna_eset.rds")
-eset <- readRDS("prad_mirna_eset.rds")
+eset.mirna <- extract(prad, "miRNASeq_Gene")
+saveRDS(eset.mirna, file="prad_mirna_eset.rds")
+eset.mirna <- readRDS("prad_mirna_eset.rds")
 ```
 
 ```{r}
@@ -126,17 +126,17 @@ mergeVecs(x1=c(1, 2, 3, NA), x2=c(2, 2, NA, 4))
 ```
 
 ```{r}
-eset$racevar = factor(mergeVecs(as.character(eset$patient.clinical_cqcf.race), as.character(eset$patient.race)))
-eset$batch <- factor(eset$batch)
-eset = eset[, eset$racevar %in% c("white", "black or african american")]
-eset$gleason <- as.numeric(eset$gleason_score)
+eset.mirna$racevar = factor(mergeVecs(as.character(eset.mirna$patient.clinical_cqcf.race), as.character(eset.mirna$patient.race)))
+eset.mirna$batch <- factor(eset.mirna$batch)
+eset.mirna = eset.mirna[, eset.mirna$racevar %in% c("white", "black or african american")]
+eset.mirna$gleason <- as.numeric(eset.mirna$gleason_score)
 ```
 
 ## DESeq2 correcting for batch and Gleason score
 
 ```{r, cache=TRUE}
-countData <- exprs(eset)
-colData <- pData(eset)
+countData <- exprs(eset.mirna)
+colData <- pData(eset.mirna)
 dds <- DESeqDataSetFromMatrix(countData = countData,
                               colData = colData,
                               design = ~ gleason + batch_number + racevar)
@@ -221,7 +221,7 @@ pheatmap(log2.norm.counts, cluster_rows=TRUE,
 ```
 
 # Not needed, here for posterity. Loading & checking Tiffany's racevar.
-Load Tiffany's file with the race variable and make its barcodes equivalent to eset:
+Load Tiffany's file with the race variable and make its barcodes equivalent to eset.mirna:
 ```{r}
 racevar <- read.csv("racevariable.csv", stringsAsFactors = FALSE)
 racevar[, 1] <- paste0(racevar[, 1], "-01")
@@ -231,20 +231,38 @@ racevar[, 1] <- gsub(".", "-", racevar[, 1], fixed=TRUE)
 For interests' sake, which patients are in one dataset but not the other?
 
 ```{r}
-racevar[, 1][!racevar[, 1] %in% sampleNames(eset)]
-sampleNames(eset)[!sampleNames(eset) %in% racevar[, 1]]
+racevar[, 1][!racevar[, 1] %in% sampleNames(eset.mirna)]
+sampleNames(eset.mirna)[!sampleNames(eset.mirna) %in% racevar[, 1]]
 ```
 
-Keep only patients in both eset and racevar, and match up the rows:
+Keep only patients in both eset.mirna and racevar, and match up the rows:
 ```{r}
-eset2 <- eset[, sampleNames(eset) %in% racevar[, 1]]
-racevar <- racevar[racevar[, 1] %in% sampleNames(eset2), ]
-racevar <- racevar[match(sampleNames(eset2), racevar[, 1]), ]
-all.equal(sampleNames(eset2), racevar[, 1])
+eset.mirna2 <- eset.mirna[, sampleNames(eset.mirna) %in% racevar[, 1]]
+racevar <- racevar[racevar[, 1] %in% sampleNames(eset.mirna2), ]
+racevar <- racevar[match(sampleNames(eset.mirna2), racevar[, 1]), ]
+all.equal(sampleNames(eset.mirna2), racevar[, 1])
 ```
 
-Add racevar[, 2] to eset2:
+Add racevar[, 2] to eset.mirna2:
 ```{r}
-eset2$racevar <- racevar[, 2]
-summary(eset2$racevar == eset2$race)
+eset.mirna2$racevar <- racevar[, 2]
+summary(eset.mirna2$racevar == eset.mirna2$race)
+```
+
+# Spearman correlation between miR-1304 and some mRNA
+
+```{r, warning=FALSE}
+int = intersect(sampleNames(eset.mirna), sampleNames(eset.rnaseq))
+goi = c("FBXO45", "ACBD3", "PFKFB2", "USP47", "MKX", "CAPRIN2", "AKR1B1", "KIAA1324")
+goi = c("KIAA1324", "AKR1B1", "CAPRIN2", "MKX")
+eset.mirna2 = eset.mirna["hsa-mir-1304", int]
+eset.rnaseq2 = eset.rnaseq[goi, int]
+tests=apply(exprs(eset.rnaseq2), 1, function(x){
+    res=cor.test(x, exprs(eset.mirna2)[1, ], method="spearman")
+    output = c(res$estimate, res$p.value)
+    names(output) = c("rho", "p-value")
+    return(output)
+})
+tests=t(tests)
+tests
 ```
