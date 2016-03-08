@@ -1,0 +1,209 @@
+---
+title: "TCGA OVC"
+author: "Levi Waldron"
+date: "March 8, 2016"
+output: 
+  html_document: 
+    number_sections: yes
+    toc: yes
+---
+
+# TCGA analysis using RTCGAToolbox
+
+```{r, message=FALSE}
+if(!require(RTCGAToolbox)){
+  biocLite("devtools")
+  biocLite(c("limma", "RCircos", "data.table", "RCurl", "RJSONIO"))
+  biocLite("Link-NY/RTCGAToolbox")
+}
+library(Biobase)
+library(RTCGAToolbox)
+```
+
+## Download TCGA ov data
+
+```{r ovdownload, cache=TRUE, message=FALSE}
+rundates <- getFirehoseRunningDates()
+analysisdates <- getFirehoseAnalyzeDates()
+ov <- getFirehoseData("OV", runDate=rundates[1],
+                      gistic2_Date=analysisdates[1], RNAseq_Gene=FALSE, 
+        miRNASeq_Gene=TRUE, RNAseq2_Gene_Norm=TRUE, CNA_SNP=FALSE,
+        CNV_SNP=FALSE, CNA_Seq=FALSE, CNA_CGH=FALSE,  Methylation=FALSE,
+        Mutation=FALSE, mRNA_Array=FALSE, miRNA_Array=TRUE, RPPA=FALSE)
+```
+
+```{r ovrnaseqextract, cache=TRUE}
+eset.rnaseq <- RTCGAToolbox::extract(ov, "rnaseq2genenorm")
+write.csv(exprs(eset.rnaseq), file="ov_rnaseq.csv")
+write.csv(pData(eset.rnaseq), file="ov_clinical.csv")
+saveRDS(eset.rnaseq, file="ov_eset.rds")
+```
+
+See what clinical data are available by default:
+
+```{r, eval=FALSE}
+summary(pData(eset.rnaseq))
+```
+
+
+## MicroRNA dataset
+Create and save to disk:
+```{r ovmirnaextract, cache=TRUE}
+eset.mirna <- RTCGAToolbox::extract(ov, "miRNASeq_Gene")
+saveRDS(eset.mirna, file="ov_mirna_eset.rds")
+```
+
+Don't see miR-1207, only see a few counts of 939, plenty of 637:
+
+```{r}
+mat <- exprs(eset.mirna)[c("hsa-mir-637", "hsa-mir-939", "hsa-mir-1207"), ]
+library(pheatmap)
+pheatmap(log2(mat + 1))
+```
+
+## plot PAX8 against hsa-mir-939
+
+```{r}
+pax8 <- exprs(eset.rnaseq)["PAX8", ]
+mir939 <- exprs(eset.mirna)["hsa-mir-939", ]
+pax8 <- pax8[names(pax8) %in% names(mir939)]
+mir939 <- mir939[match(names(pax8), names(mir939))]
+identical(names(pax8), names(mir939))
+cor.test(pax8, mir939, method="spearman")  #no correlation
+plot(log2(pax8+1) ~ log2(mir939+1))
+```
+
+# curatedOvarianData analysis
+
+Load the datasets:
+
+```{r, message=FALSE}
+library(curatedOvarianData)
+data(package="curatedOvarianData")
+data(TCGA.RNASeqV2_eset)
+data(TCGA_eset)
+data(TCGA.mirna.8x15kv2_eset)
+```
+
+## PAX8 expression in TCGA RNA-seq and microarray datasets
+
+```{r}
+hist(exprs(TCGA.RNASeqV2_eset["PAX8", ]))
+hist(exprs(TCGA_eset["PAX8", ]))
+```
+
+```{r}
+pax8.array <- exprs(TCGA_eset)["PAX8", ]
+pax8.rnaseq <- exprs(TCGA.RNASeqV2_eset)["PAX8", ]
+pax8.array <- pax8.array[names(pax8.array) %in% names(pax8.rnaseq)]
+pax8.rnaseq <- pax8.rnaseq[match(names(pax8.array), names(pax8.rnaseq))]
+plot(pax8.rnaseq, pax8.array, xlab="RNA-seq", ylab="Affymetrix array", main="PAX8 log2 expression")
+```
+
+## Create a meta-analysis dataset from curatedOvarianData
+
+```{r createCODdata, cache=TRUE}
+source(system.file("extdata", "patientselection.config",package="curatedOvarianData"))
+rule.2 <- c("histological_type","^ser$")
+rule.3 <- c("summarystage","^late$")
+rule.4 <- c("summarygrade","^high$")
+# add Surv objects as phenoData label "y" to the esets
+add.surv.y <- function(X) Surv(X$days_to_death, X$vital_status=="deceased")
+#if strict.checking is TRUE, patients missing any of the above
+#metadata will be remove.  If FALSE, these patients are kept.
+strict.checking <- TRUE
+source(system.file("extdata", "createEsetList.R", package = "curatedOvarianData"))
+esets <- esets[!grepl("TCGA.RNASeqV2_eset", names(esets))]
+sum(sapply(esets, ncol))  #1427 samples
+```
+
+
+## Survival analysis
+
+```{r, message=FALSE}
+forestplot <- function(esets, y="y", probeset, formula=y~probeset,
+                       mlab="Overall", rma.method="FE", at=NULL,xlab="Hazard Ratio",...) {
+    require(metafor)
+    esets <- esets[sapply(esets, function(x) probeset %in% featureNames(x))]
+    coefs <- sapply(1:length(esets), function(i) {
+        tmp <- as(phenoData(esets[[i]]), "data.frame")
+        tmp$y <- esets[[i]][[y]]
+        tmp$probeset <- exprs(esets[[i]])[probeset,]
+        summary(coxph(formula,data=tmp))$coefficients[1,c(1,3)]
+    })
+    res.rma <- metafor::rma(yi = coefs[1,], sei = coefs[2,],
+                            method=rma.method)
+    if (is.null(at)) at <- log(c(0.25,1,4,20))
+    forest.rma(res.rma, xlab=xlab, slab=gsub("_eset$","",names(esets)),
+               atransf=exp, at=at, mlab=mlab,...)
+    return(res.rma)
+}
+res <- forestplot(esets=esets,probeset="PAX8",at=log(c(0.5,1,2,4)))
+```
+
+## See if PAX8 is bimodal in more datasets
+
+```{r, fig.height=12, fig.width=7}
+par(mfrow=c(4, 3))
+for (i in 1:length(esets)){
+    if ("PAX8" %in% featureNames(esets[[i]]))
+        hist(exprs(esets[[i]])["PAX8", ], main=names(esets)[[i]])
+}
+```
+
+Is PAX8 expression related to primary site? 
+
+```{r}
+data(GSE9891_eset)
+pData(GSE9891_eset)[1, ]
+boxplot(exprs(GSE9891_eset)["PAX8", ] ~ GSE9891_eset$arrayedsite)
+```
+
+## Potential PAX8 targets
+
+```{r}
+library(pheatmap)
+mat <- data.frame(t(exprs(TCGA_eset)[c("SNAI1", "TWIST1", "TIMP3", "E2F1", "PAX8"), ]))
+pheatmap(t(mat), scale="row")
+plot(PAX8 ~ TWIST1, dat=mat)
+```
+
+Significance tests for correlation
+
+```{r}
+cor.test(mat$PAX8, mat$TWIST1) #significant
+cor.test(mat$PAX8, mat$SNAI1)  #significant only in GSE9891
+cor.test(mat$PAX8, mat$TIMP3)  #not significant
+cor.test(mat$PAX8, mat$E2F1)  #barely significant / not significant in GSE9891
+```
+
+## miRNA using array data from curatedOvarianData
+
+```{r}
+data(TCGA.mirna.8x15kv2_eset)
+mir939 <- exprs(TCGA.mirna.8x15kv2_eset)["hsa-miR-939", ]
+pax8 <- exprs(TCGA_eset)["PAX8", ]
+pax8 <- pax8[names(pax8) %in% names(mir939)]
+mir939 <- mir939[match(names(pax8), names(mir939))]
+identical(names(pax8), names(mir939))
+plot(log2(pax8+1) ~ log2(mir939+1))
+cor.test(pax8, mir939, method="spearman")  #no correlation
+```
+
+## What is correlated with PAX8 and TWIST1?
+
+```{r}
+pax8.cor <- cor(exprs(TCGA_eset)["PAX8", ], t(exprs(TCGA_eset)))[1, ]
+twist1.cor <- cor(exprs(TCGA_eset)["TWIST1", ], t(exprs(TCGA_eset)))[1, ]
+hist(pax8.cor)
+hist(twist1.cor)
+```
+
+Heatmap of genes correlated to PAX8 and TWIST1:
+
+```{r, fig.width=9, fig.height=9}
+twist1.cluster <- names(twist1.cor)[twist1.cor > 0.5]
+pax8.cluster <- names(pax8.cor)[twist1.cor > 0.5]
+pheatmap(exprs(TCGA_eset)[unique(c("PAX8", "TWIST1", twist1.cluster, pax8.cluster)), ],
+         show_colnames=FALSE)
+```

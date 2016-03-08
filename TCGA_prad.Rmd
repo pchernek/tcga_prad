@@ -253,6 +253,7 @@ summary(eset.mirna2$racevar == eset.mirna2$race)
 
 ```{r, warning=FALSE}
 int = intersect(sampleNames(eset.mirna), sampleNames(eset.rnaseq))
+goi = featureNames(eset.rnaseq)
 goi = c("FBXO45", "ACBD3", "PFKFB2", "USP47", "MKX", "CAPRIN2", "AKR1B1", "KIAA1324")
 goi = c("KIAA1324", "AKR1B1", "CAPRIN2", "MKX")
 eset.mirna2 = eset.mirna["hsa-mir-1304", int]
@@ -264,5 +265,6 @@ tests=apply(exprs(eset.rnaseq2), 1, function(x){
     return(output)
 })
 tests=t(tests)
+tests = tests[order(tests[, 2]), ]
 tests
 ```
