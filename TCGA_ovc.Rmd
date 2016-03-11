@@ -207,3 +207,34 @@ pax8.cluster <- names(pax8.cor)[twist1.cor > 0.5]
 pheatmap(exprs(TCGA_eset)[unique(c("PAX8", "TWIST1", twist1.cluster, pax8.cluster)), ],
          show_colnames=FALSE)
 ```
+
+## Look for TP53 mutation status mentioned in any dataset
+
+```{r createFullCODdata, cache=TRUE}
+library(curatedOvarianData)
+source(system.file("extdata", "patientselection_all.config",package="curatedOvarianData"))
+source(system.file("extdata", "createEsetList.R", package = "curatedOvarianData"))
+esets <- esets[!grepl("TCGA.RNASeqV2_eset", names(esets))]
+sum(sapply(esets, ncol))  #1427 samples
+
+has.p53 <- sapply(1:length(esets), function(i){
+  spl <- grep("P53", esets[[i]]$uncurated_author_metadata, val=TRUE)
+})
+
+uncurated.list <- strsplit(esets[["GSE6008_eset"]]$uncurated_author_metadata, "///")
+uncurated.mat <- sapply(uncurated.list, function(x){
+  res <- x[8:21]
+  res <- sub(".+: ", "", res)
+  res
+})
+rownames(uncurated.mat) <- sapply(strsplit(uncurated.list[[1]][8:21], ": "), function(x) x[2])
+```
+
+TP53 mutations and P53 immunohistochemistry:
+```{r}
+table(uncurated.mat["P53_immunohistochemistry", ], uncurated.mat["Tumor_Type", ])
+table(uncurated.mat["TP53_mutation", ], uncurated.mat["Tumor_Type", ])
+table(uncurated.mat["P53_immunohistochemistry", ], uncurated.mat["TP53_mutation", ])
+write.csv(uncurated.mat, file="mutation_status.csv")
+```
+
