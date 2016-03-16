@@ -5,15 +5,24 @@ date: "December 23, 2015"
 output: html_document
 ---
 
-# Load TCGA data
+# Load / install packages
 
 ```{r, message=FALSE}
-if(!require(RTCGAToolbox)){
-  biocLite("devtools")
-  biocLite(c("limma", "RCircos", "data.table", "RCurl", "RJSONIO"))
-  biocLite("Link-NY/RTCGAToolbox")
-}
+library(devtools)
 library(DESeq2)
+if(require(RTCGAToolbox)){
+  si <- devtools::session_info()
+  must.install <- FALSE
+  if(!grepl("link-ny", si$packages[si$packages[, 1] == "RTCGAToolbox", 5], ignore.case = TRUE)){
+    must.install <- TRUE
+  }
+}else{
+  must.install <- TRUE
+}
+if(must.install){
+  biocLite(c("limma", "RCircos", "data.table", "RCurl", "RJSONIO"))
+  biocLite("Link-NY/RTCGAToolbox", "vjcitn/MultiAssayExperiment")
+}
 ```
 
 # Download TCGA PRAD data

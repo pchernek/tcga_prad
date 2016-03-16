@@ -129,7 +129,7 @@ forestplot <- function(esets, y="y", probeset, formula=y~probeset,
         tmp <- as(phenoData(esets[[i]]), "data.frame")
         tmp$y <- esets[[i]][[y]]
         tmp$probeset <- exprs(esets[[i]])[probeset,]
-        summary(coxph(formula,data=tmp))$coefficients[1,c(1,3)]
+        summary(survival::coxph(formula,data=tmp))$coefficients[1,c(1,3)]
     })
     res.rma <- metafor::rma(yi = coefs[1,], sei = coefs[2,],
                             method=rma.method)
