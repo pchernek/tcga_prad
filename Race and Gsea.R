@@ -1,26 +1,39 @@
 #Packages Required#
 
+must.install <- FALSE
+if(require(RTCGAToolbox)){
+  si <- devtools::session_info()
+  if(!grepl("link-ny", si$packages[si$packages[, 1] == "RTCGAToolbox", 5], ignore.case = TRUE)){
+    must.install <- TRUE
+  }
+  if(!require("TCGAmisc")){
+    must.install <- TRUE
+  }
+}else{
+  must.install <- TRUE
+}
+if(must.install){
+  BiocInstaller::biocLite(c("Link-NY/RTCGAToolbox", "waldronlab/TCGAmisc"))
+}
 
 
 library("TCGAmisc")
 library("gage")
 library("readr")
+library(RTCGAToolbox)
 
-
-# Data types needed from Prad#
-
-eset <- extract(prad, "rnaseq2genenorm")
-
-eset1<- extract(prad, "miRNASeq_Gene")
-
-
-# mRNA and miRNA 1304 Expression Datasets#
-
-y<-log2(exprs(eset)+1)
-
-zz <- exprs(eset1)["hsa-mir-1304",]
-
-z <- log2(zz+1)
+if(file.exists("prad_eset.rds" & file.exists("prad_mirna_eset.rds"))){
+  prad_eset <- readRDS("prad_eset.rds")
+  prad_mirna_eset <- readRDS("prad_mirna_eset.rds")
+}else{
+  (rundates <- getFirehoseRunningDates())
+  prad <- getFirehoseData("PRAD", runDate="20151101",
+                        miRNASeq_Gene=TRUE, RNAseq2_Gene_Norm=TRUE)
+  prad_eset <- extract(prad, "rnaseq2genenorm")
+  prad_mirna_eset <- extract(prad, "miRNASeq_Gene")
+  saveRDS(prad_eset, file="prad_eset.rds")
+  saveRDS(prad_mirna_eset, file="prad_mirna_eset.rds")
+}
 
 
 # 1304 targets and Race Variable upload#
@@ -35,19 +48,23 @@ racevar <- read_csv("https://raw.githubusercontent.com/lwaldron/tcga_prad/master
 
 
 racevar$patientID <- barcode(racevar$X)
-esetID <- barcode(colnames(exprs(eset)))
-esetRace <- racevar$race[match(esetID, racevar$patientID)]
-blacks <- which(esetRace == "black or african american")
-whites <- which(esetRace == "white")
+esetID <- barcode(colnames(exprs(prad_eset)))
 
-blacks
+racevar <- racevar[match(esetID, racevar$patientID), ]
 
-whites
+if( identical(esetID, racevar$patientID) ){
+  prad_eset$race <- racevar$race
+}else{
+  prad_eset$race <- NA
+}
+
+blacks <- which(prad_eset$race == "black or african american")
+whites <- which(prad_eset$race == "white")
 
 
 
 #Gage Analysis for Race Response#
 
-gagePrep(exprs= y, samp = blacks, same.dir = TRUE, rank.test = FALSE, use.fold = TRUE, weights = NULL)
+kegg.p <- gage(exprs = log2(exprs(prad_eset)+1), gsets = kegg.gs, ref= whites, samp = blacks, compare="unpaired")
+kegg.sig <- sigGeneSet(gse16873.kegg.p, outname="kegg")
 
-gage(exprs = y, gsets = as.list(miRNA1304.targets), ref= whites , samp = blacks, full.table = TRUE, saaPrep = gagePrep, saaTest = gs.tTest, same.dir = TRUE, test4up=TRUE, compare = "unpaired")
