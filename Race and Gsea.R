@@ -61,10 +61,20 @@ if( identical(esetID, racevar$patientID) ){
 blacks <- which(prad_eset$race == "black or african american")
 whites <- which(prad_eset$race == "white")
 
+## kegg.db uses Entrez Gene identifiers and prad_eset uses gene symbols, 
+## so these need to be mapped.  An easier solution would be to get the mSigDB 
+## gene sets that already use gene symbols.
 
+exdat <- log2(exprs(prad_eset) + 1)
+library(org.Hs.eg.db)
+select(org.Hs.eg.db, head(rownames(exdat)), "ENTREZID")
+symbols <- mapIds(org.Hs.eg.db, rownames(exdat), column="ENTREZID", keytype="SYMBOL")
+mapped <- !is.na(symbols)
+exdat <- exdat[mapped, ]
+rownames(exdat) <- symbols[mapped]
 
 #Gage Analysis for Race Response#
 
-kegg.p <- gage(exprs = log2(exprs(prad_eset)+1), gsets = kegg.gs, ref= whites, samp = blacks, compare="unpaired")
+kegg.p <- gage(exprs = exdat, gsets = kegg.gs, ref= whites, samp = blacks, compare="unpaired")
 kegg.sig <- sigGeneSet(gse16873.kegg.p, outname="kegg")
 

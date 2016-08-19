@@ -25,6 +25,23 @@ if(must.install){
 }
 ```
 
+```{r}
+mergeVecs <- function(x1, x2){
+  ##x1 and x2 are vectors to be merged.
+  ##x1 will be over-written by x2, and in case of conflict, x2 takes priority
+  if(!identical(length(x1), length(x2))) stop("x1 and x2 must have the same length")
+  if(!identical(class(x1), class(x2))) stop("x1 and x2 must have the same class")
+  x1[is.na(x1)] = x2[is.na(x1)]
+  mismatches <- which(x1 != x2)
+  if(length(mismatches) > 0){
+    warning(paste("There were mismatches in positions:", paste0(mismatches, collapse=", ")))
+    x1[mismatches] = x2[mismatches]
+  }
+  return(x1)
+}
+mergeVecs(x1=c(1, 2, 3, NA), x2=c(2, 2, NA, 4))
+```
+
 # Download TCGA PRAD data
 
 ```{r, cache=TRUE}
@@ -58,6 +75,8 @@ dses
 
 ```{r, cache=TRUE}
 eset.rnaseq <- extract(prad, "rnaseq2genenorm")
+eset.rnaseq$racevar = mergeVecs(as.character(eset.rnaseq$patient.clinical_cqcf.race), as.character(eset.rnaseq$patient.race))
+
 write.csv(exprs(eset.rnaseq), file="prad_rnaseq.csv")
 write.csv(pData(eset.rnaseq), file="prad_clinical.csv")
 saveRDS(eset.rnaseq, file="prad_eset.rds")
@@ -67,6 +86,20 @@ To load the eset again:
 
 ```{r, cache=TRUE}
 eset.rnaseq <- readRDS("prad_eset.rds")
+```
+
+# Create files for Broad GSEA tool
+
+```{r}
+## BiocInstaller::biocLite("lwaldron/LeviRmisc")
+library(LeviRmisc)
+eset.rnaseq$race = eset.rnaseq$racevar
+eset = eset.rnaseq[, eset.rnaseq$race %in% c("black or african american", "white")]
+eset$race[eset$race=="black or african american"] <- "blackOrAA"
+makeCLS(eset$race, fname="race.cls")
+output <- cbind(rownames(eset), rep(NA, nrow(eset)), log2(exprs(eset) + 1))
+colnames(output)[1:2] = c("NAME", "DESCRIPTION")
+write.table(output, file="race.gct", sep="\t", quote=FALSE)
 ```
 
 # Make a histogram of PSA (KLK3) expression
@@ -117,22 +150,6 @@ saveRDS(eset.mirna, file="prad_mirna_eset.rds")
 eset.mirna <- readRDS("prad_mirna_eset.rds")
 ```
 
-```{r}
-mergeVecs <- function(x1, x2){
-  ##x1 and x2 are vectors to be merged.
-  ##x1 will be over-written by x2, and in case of conflict, x2 takes priority
-  if(!identical(length(x1), length(x2))) stop("x1 and x2 must have the same length")
-  if(!identical(class(x1), class(x2))) stop("x1 and x2 must have the same class")
-  x1[is.na(x1)] = x2[is.na(x1)]
-  mismatches <- which(x1 != x2)
-  if(length(mismatches) > 0){
-    warning(paste("There were mismatches in positions:", paste0(mismatches, collapse=", ")))
-    x1[mismatches] = x2[mismatches]
-  }
-  return(x1)
-}
-mergeVecs(x1=c(1, 2, 3, NA), x2=c(2, 2, NA, 4))
-```
 
 ```{r}
 eset.mirna$racevar = factor(mergeVecs(as.character(eset.mirna$patient.clinical_cqcf.race), as.character(eset.mirna$patient.race)))
