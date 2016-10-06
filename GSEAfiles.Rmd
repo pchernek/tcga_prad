@@ -1,0 +1,46 @@
+---
+title: "GSEAfiles"
+author: "Levi Waldron"
+date: "October 6, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Download from: https://www.dropbox.com/s/g9k41gv8qx1sqqm/prad_eset.rds
+
+```{r}
+BiocInstaller::biocLite("lwaldron/LeviRmisc")
+```
+
+```{r, cache=TRUE}
+library(Biobase)
+eset.rnaseq <- readRDS("prad_eset.rds")
+```
+
+Remove non-tumor samples:
+```{r}
+dim(eset.rnaseq)
+eset.rnaseq <- eset.rnaseq[, grepl("-0[0-9]$", sampleNames(eset.rnaseq))]
+dim(eset.rnaseq)
+```
+
+```{r}
+eset.rnaseq$race = eset.rnaseq$racevar
+eset = eset.rnaseq[, eset.rnaseq$race %in% c("black or african american", "white")]
+eset$race[eset$race=="black or african american"] <- "blackOrAA"
+
+library(LeviRmisc)
+race <- factor(eset$race, levels=c("white", "blackOrAA"))
+makeCLS(race, fname="race.cls")
+sink("race.gct")
+cat("#1.2\n")
+cat(nrow(eset), "\t", ncol(eset), "\n")
+sink()
+output <- cbind(rownames(eset), rep(NA, nrow(eset)), log2(exprs(eset) + 1))
+colnames(output)[1:2] = c("NAME", "DESCRIPTION")
+write.table(output, file="race.gct", sep="\t", quote=FALSE, append=TRUE)
+```
+
