@@ -1,19 +1,45 @@
 ---
 title: "TCGA PRAD"
-author: "Levi Waldron"
-date: "September 14, 2015"
+author: "Peter Chernek and Levi Waldron"
+date: "December 23, 2015"
 output: html_document
 ---
 
-# Load TCGA data
+# Load / install packages
 
 ```{r, message=FALSE}
-if(!require(RTCGAToolbox)){
-  biocLite("devtools")
-  biocLite(c("limma", "RCircos", "data.table", "RCurl", "RJSONIO"))
-  biocLite("Link-NY/RTCGAToolbox")
-}
+library(devtools)
 library(DESeq2)
+if(require(RTCGAToolbox)){
+  si <- devtools::session_info()
+  must.install <- FALSE
+  if(!grepl("link-ny", si$packages[si$packages[, 1] == "RTCGAToolbox", 5], ignore.case = TRUE)){
+    must.install <- TRUE
+  }
+}else{
+  must.install <- TRUE
+}
+if(must.install){
+  biocLite(c("limma", "RCircos", "data.table", "RCurl", "RJSONIO"))
+  biocLite("Link-NY/RTCGAToolbox", "vjcitn/MultiAssayExperiment")
+}
+```
+
+```{r}
+mergeVecs <- function(x1, x2){
+  ##x1 and x2 are vectors to be merged.
+  ##x1 will be over-written by x2, and in case of conflict, x2 takes priority
+  if(!identical(length(x1), length(x2))) stop("x1 and x2 must have the same length")
+  if(!identical(class(x1), class(x2))) stop("x1 and x2 must have the same class")
+  x1[is.na(x1)] = x2[is.na(x1)]
+  mismatches <- which(x1 != x2)
+  if(length(mismatches) > 0){
+    warning(paste("There were mismatches in positions:", paste0(mismatches, collapse=", ")))
+    x1[mismatches] = x2[mismatches]
+  }
+  return(x1)
+}
+mergeVecs(x1=c(1, 2, 3, NA), x2=c(2, 2, NA, 4))
 ```
 
 # Download TCGA PRAD data
@@ -48,36 +74,52 @@ dses
 ```
 
 ```{r, cache=TRUE}
-eset <- extract(prad, "rnaseq2genenorm")
-write.csv(exprs(eset), file="prad_rnaseq.csv")
-write.csv(pData(eset), file="prad_clinical.csv")
-saveRDS(eset, file="prad_eset.rds")
+eset.rnaseq <- extract(prad, "rnaseq2genenorm")
+eset.rnaseq$racevar = mergeVecs(as.character(eset.rnaseq$patient.clinical_cqcf.race), as.character(eset.rnaseq$patient.race))
+
+write.csv(exprs(eset.rnaseq), file="prad_rnaseq.csv")
+write.csv(pData(eset.rnaseq), file="prad_clinical.csv")
+saveRDS(eset.rnaseq, file="prad_eset.rds")
 ```
 
 To load the eset again:
 
 ```{r, cache=TRUE}
-eset <- readRDS("prad_eset.rds")
+eset.rnaseq <- readRDS("prad_eset.rds")
+```
+
+# Create files for Broad GSEA tool
+
+```{r}
+## BiocInstaller::biocLite("lwaldron/LeviRmisc")
+library(LeviRmisc)
+eset.rnaseq$race = eset.rnaseq$racevar
+eset = eset.rnaseq[, eset.rnaseq$race %in% c("black or african american", "white")]
+eset$race[eset$race=="black or african american"] <- "blackOrAA"
+makeCLS(eset$race, fname="race.cls")
+output <- cbind(rownames(eset), rep(NA, nrow(eset)), log2(exprs(eset) + 1))
+colnames(output)[1:2] = c("NAME", "DESCRIPTION")
+write.table(output, file="race.gct", sep="\t", quote=FALSE)
 ```
 
 # Make a histogram of PSA (KLK3) expression
 
 ```{r}
-hist(exprs(eset["KLK3", ]))
-hist(log(exprs(eset["KLK3", ])))
+hist(exprs(eset.rnaseq["KLK3", ]))
+hist(log(exprs(eset.rnaseq["KLK3", ])))
 ```
 
 # See what clinical data are available by default:
 
-```{r}
-summary(pData(eset))
+```{r, eval=FALSE}
+summary(pData(eset.rnaseq))
 ```
 
 # Look for association between KLK3 expression and clinical PSA
 
 ```{r}
-psadat <- data.frame(psa=as.numeric(as.character(eset$patient.stage_event.psa.psa_value)),
-                     klk3=t(exprs(eset["KLK3", ])))
+psadat <- data.frame(psa=as.numeric(as.character(eset.rnaseq$patient.stage_event.psa.psa_value)),
+                     klk3=t(exprs(eset.rnaseq["KLK3", ])))
 psadat.complete <- psadat[complete.cases(psadat), ]
 plot(KLK3 ~ psa, data=psadat.complete, xlab="clinical PSA", ylab="KLK3 tumor expression", log="xy")
 fit <- lowess(x=psadat.complete$psa, y=psadat.complete$KLK3)
@@ -95,66 +137,117 @@ cor.test(x=psadat$KLK3,  y=psadat$psa, method="spearman")
 
 Need to get the better race variable with complete data from Tiffany:
 ```{r}
-table(eset$race)
-boxplot(psadat$psa ~ eset$race, ylab="PSA")
+table(eset.rnaseq$race)
+boxplot(psadat$psa ~ eset.rnaseq$race, ylab="PSA")
 ```
 
 # MicroRNA dataset
 Create and save to disk:
 ```{r}
 library(Biobase)
-eset1 <- extract(prad, "miRNASeq_Gene")
-saveRDS(eset1, file="prad_mirna_eset.rds")
+eset.mirna <- extract(prad, "miRNASeq_Gene")
+saveRDS(eset.mirna, file="prad_mirna_eset.rds")
+eset.mirna <- readRDS("prad_mirna_eset.rds")
 ```
+
 
 ```{r}
-mergeVecs <- function(x1, x2){
-  ##x1 and x2 are vectors to be merged.
-  ##x1 will be over-written by x2, and in case of conflict, x2 takes priority
-  if(!identical(length(x1), length(x2))) stop("x1 and x2 must have the same length")
-  if(!identical(class(x1), class(x2))) stop("x1 and x2 must have the same class")
-  x1[is.na(x1)] = x2[is.na(x1)]
-  mismatches <- which(x1 != x2)
-  if(length(mismatches) > 0){
-    warning(paste("There were mismatches in positions:", paste0(mismatches, collapse=", ")))
-    x1[mismatches] = x2[mismatches]
-  }
-  return(x1)
-}
-mergeVecs(x1=c(1, 2, 3, NA), x2=c(2, 2, NA, 4))
+eset.mirna$racevar = factor(mergeVecs(as.character(eset.mirna$patient.clinical_cqcf.race), as.character(eset.mirna$patient.race)))
+eset.mirna$batch <- factor(eset.mirna$batch)
+eset.mirna = eset.mirna[, eset.mirna$racevar %in% c("white", "black or african american")]
+eset.mirna$gleason <- as.numeric(eset.mirna$gleason_score)
 ```
 
-```{r}
-eset1$race = mergeVecs(as.character(eset1$patient.clinical_cqcf.race), as.character(eset1$patient.race))
-eset1 = eset1[, eset1$race %in% c("white", "black or african american")]
-```
-
-## DESeq2
+## DESeq2 correcting for batch and Gleason score
 
 ```{r, cache=TRUE}
-countData <- exprs(eset1)
-colData <- pData(eset1)
+countData <- exprs(eset.mirna)
+colData <- pData(eset.mirna)
 dds <- DESeqDataSetFromMatrix(countData = countData,
                               colData = colData,
-                              design = ~ batch_number + race)
+                              design = ~ gleason + batch_number + racevar)
 dds <- DESeq(dds)
 ```
 
 ```{r, cache=TRUE}
-res <- results(dds, contrast=c("race", "black or african american", "white"))
-res
-write.csv(res, file="DESeq2_results.csv")
+res.batch.gleason <- results(dds, contrast=c("racevar", "black or african american", "white"))
+res.batch.gleason <- res.batch.gleason[order(res.batch.gleason$pvalue), ]
+write.csv(res.batch.gleason, file="DESeq2_batch.gleason.csv")
 ```
 
 ```{r}
-res.sig <- res[which(res$padj < 0.05), ]
-res.sig <- res.sig[order(res.sig$pvalue), ]
-as.matrix(res.sig)
+(res.batch.gleason.sig <- res.batch.gleason[which(res.batch.gleason$padj < 0.05), ])
 ```
 
+### Heatmap
+
+```{r heatmapbatchgleason}
+library(pheatmap)
+sig.mir <- rownames(countData)[rownames(countData) %in% rownames(res.batch.gleason.sig)]
+nt <- normTransform(dds) # defaults to log2(x+1)
+log2.norm.counts <- assay(nt)[sig.mir, ]
+df <- as.data.frame(colData(dds))[, c("gleason", "racevar"), drop=FALSE]
+raceorder <- order(df$racevar, colSums(log2.norm.counts))
+df <- df[raceorder, , drop=FALSE]
+log2.norm.counts <- log2.norm.counts[, raceorder]
+stopifnot(identical(rownames(df), colnames(log2.norm.counts)))
+pheatmap(log2.norm.counts, cluster_rows=TRUE, show_colnames=FALSE, 
+         cluster_cols=TRUE,
+         clustering_distance_rows="correlation", 
+         clustering_distance_cols="correlation", 
+         scale="none", annotation_col=df["racevar"])
+```
+
+Boxplot of the top differentially expressed miRNA
+```{r boxplot}
+topmir=rownames(res.batch.gleason.sig)[1]
+boxplot(log2.norm.counts[topmir, ] ~ df$racevar,
+        xlab="Race", ylab="log2 expression", main=topmir)
+stripchart(log2.norm.counts[topmir, ] ~ df$racevar, vertical=TRUE, method="jitter",
+            pch = 21, col = "maroon", bg = "bisque", 
+            add = TRUE)
+```
+
+## DESeq2 correcting for batch only
+
+```{r deseqbatchonly, cache=TRUE}
+dds2 <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = colData,
+                              design = ~ batch_number + racevar)
+dds2 <- DESeq(dds2)
+```
+
+```{r resbatchonly, cache=TRUE}
+res.batch <- results(dds2, contrast=c("racevar", "black or african american", "white"))
+res.batch <- res.batch[order(res.batch$pvalue), ]
+write.csv(res.batch, file="DESeq2_batch.csv")
+```
+
+```{r}
+(res.batch.sig <- res.batch[which(res.batch$padj < 0.05), ])
+```
+
+### Heatmap
+
+```{r heatmapbatchonly}
+library(pheatmap)
+sig.mir.batch <- rownames(countData)[rownames(countData) %in% rownames(res.batch.sig)]
+nt <- normTransform(dds2) # defaults to log2(x+1)
+log2.norm.counts <- assay(nt)[sig.mir.batch, ]
+df <- as.data.frame(colData(dds2)[, c("gleason","racevar")])
+raceorder <- order(df$racevar, colSums(log2.norm.counts))
+df <- df[raceorder, , drop=FALSE]
+log2.norm.counts <- log2.norm.counts[, raceorder]
+stopifnot(identical(rownames(df), colnames(log2.norm.counts)))
+pheatmap(log2.norm.counts, cluster_rows=TRUE, 
+         show_colnames=FALSE, cluster_cols=FALSE,
+         clustering_distance_rows="correlation", 
+         clustering_distance_cols="correlation", 
+         scale="row", annotation_col=df["racevar"])
+```
 
 # Not needed, here for posterity. Loading & checking Tiffany's racevar.
-Load Tiffany's file with the race variable and make its barcodes equivalent to eset1:
+Load Tiffany's file with the race variable and make its barcodes equivalent to eset.mirna:
 ```{r}
 racevar <- read.csv("racevariable.csv", stringsAsFactors = FALSE)
 racevar[, 1] <- paste0(racevar[, 1], "-01")
@@ -164,20 +257,40 @@ racevar[, 1] <- gsub(".", "-", racevar[, 1], fixed=TRUE)
 For interests' sake, which patients are in one dataset but not the other?
 
 ```{r}
-racevar[, 1][!racevar[, 1] %in% sampleNames(eset1)]
-sampleNames(eset1)[!sampleNames(eset1) %in% racevar[, 1]]
+racevar[, 1][!racevar[, 1] %in% sampleNames(eset.mirna)]
+sampleNames(eset.mirna)[!sampleNames(eset.mirna) %in% racevar[, 1]]
 ```
 
-Keep only patients in both eset1 and racevar, and match up the rows:
+Keep only patients in both eset.mirna and racevar, and match up the rows:
 ```{r}
-eset2 <- eset1[, sampleNames(eset1) %in% racevar[, 1]]
-racevar <- racevar[racevar[, 1] %in% sampleNames(eset2), ]
-racevar <- racevar[match(sampleNames(eset2), racevar[, 1]), ]
-all.equal(sampleNames(eset2), racevar[, 1])
+eset.mirna2 <- eset.mirna[, sampleNames(eset.mirna) %in% racevar[, 1]]
+racevar <- racevar[racevar[, 1] %in% sampleNames(eset.mirna2), ]
+racevar <- racevar[match(sampleNames(eset.mirna2), racevar[, 1]), ]
+all.equal(sampleNames(eset.mirna2), racevar[, 1])
 ```
 
-Add racevar[, 2] to eset2:
+Add racevar[, 2] to eset.mirna2:
 ```{r}
-eset2$racevar <- racevar[, 2]
-summary(eset2$racevar == eset2$race)
+eset.mirna2$racevar <- racevar[, 2]
+summary(eset.mirna2$racevar == eset.mirna2$race)
+```
+
+# Spearman correlation between miR-1304 and some mRNA
+
+```{r, warning=FALSE}
+int = intersect(sampleNames(eset.mirna), sampleNames(eset.rnaseq))
+goi = featureNames(eset.rnaseq)
+goi = c("FBXO45", "ACBD3", "PFKFB2", "USP47", "MKX", "CAPRIN2", "AKR1B1", "KIAA1324")
+goi = c("KIAA1324", "AKR1B1", "CAPRIN2", "MKX")
+eset.mirna2 = eset.mirna["hsa-mir-1304", int]
+eset.rnaseq2 = eset.rnaseq[goi, int]
+tests=apply(exprs(eset.rnaseq2), 1, function(x){
+    res=cor.test(x, exprs(eset.mirna2)[1, ], method="spearman")
+    output = c(res$estimate, res$p.value)
+    names(output) = c("rho", "p-value")
+    return(output)
+})
+tests=t(tests)
+tests = tests[order(tests[, 2]), ]
+tests
 ```

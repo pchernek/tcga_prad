@@ -1,0 +1,47 @@
+---
+title: "TCGA PRAD"
+author: "Peter Chernek and Levi Waldron"
+date: "December 23, 2015"
+output: html_document
+---
+
+# Load / install packages
+
+```{r, message=FALSE}
+library(devtools)
+library(DESeq2)
+if(require(RTCGAToolbox)){
+  si <- devtools::session_info()
+  must.install <- FALSE
+  if(!grepl("link-ny", si$packages[si$packages[, 1] == "RTCGAToolbox", 5], ignore.case = TRUE)){
+    must.install <- TRUE
+  }
+}else{
+  must.install <- TRUE
+}
+if(must.install){
+  biocLite(c("limma", "RCircos", "data.table", "RCurl", "RJSONIO"))
+  biocLite("Link-NY/RTCGAToolbox", "vjcitn/MultiAssayExperiment")
+}
+```
+
+# Download TCGA mutations data
+
+```{r, cache=TRUE}
+library(RTCGAToolbox)
+datasets <- getFirehoseDatasets()
+(rundates <- getFirehoseRunningDates())
+all.muts.rtcga <- list()
+ds <- datasets[27]
+all.muts.rtcga[[ds]] <- getFirehoseData(ds, runDate = "20151101", Mutation=TRUE)
+```
+
+# Create GRangesList objects
+
+```{r}
+prad.grl <- extract(all.muts.rtcga[[ds]], "Mutation")
+genome(prad.grl[[1]]) <- "putgenomeannotationhere"
+genome(prad.grl[[1]])
+prad.grl[[1]]
+```
+
